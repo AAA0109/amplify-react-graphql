@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import "./App.css";
 import "@aws-amplify/ui-react/styles.css";
-import { API, Storage } from 'aws-amplify';
+import { API, graphqlOperation, Storage } from 'aws-amplify';
 import {
   Button,
   Flex,
@@ -12,22 +12,40 @@ import {
   View,
   withAuthenticator,
 } from '@aws-amplify/ui-react';
-import { listNotes } from "./graphql/queries";
+import { listNotes, searchNotes } from "./graphql/queries";
 import {
   createNote as createNoteMutation,
   deleteNote as deleteNoteMutation,
 } from "./graphql/mutations";
-
+const MyQuery = /* GraphQL */`
+  query MyQuery {
+    searchNotes {
+      items {
+        id
+      }
+      total, # Specify to get total counts,
+      min,
+      max
+    }
+  }
+`;
 const App = ({ signOut }) => {
   const [notes, setNotes] = useState([]);
 
   useEffect(() => {
     fetchNotes();
+    getAggr();
   }, []);
 
+  async function getAggr() {
+    const apiData = await API.graphql(graphqlOperation(MyQuery));
+    console.log(apiData)
+    const notesFromAPI = apiData.data.searchNotes.items;
+  }
+
   async function fetchNotes() {
-    const apiData = await API.graphql({ query: listNotes });
-    const notesFromAPI = apiData.data.listNotes.items;
+    const apiData = await API.graphql(graphqlOperation(searchNotes, { sort: [{field: 'name', direction: 'desc'}] } ));
+    const notesFromAPI = apiData.data.searchNotes.items;
     await Promise.all(
       notesFromAPI.map(async (note) => {
         if (note.image) {
@@ -44,6 +62,7 @@ const App = ({ signOut }) => {
     event.preventDefault();
     const form = new FormData(event.target);
     const image = form.get("image");
+    console.log()
     const data = {
       name: form.get("name"),
       description: form.get("description"),
@@ -93,13 +112,13 @@ const App = ({ signOut }) => {
             Create Note
           </Button>
         </Flex>
+        <View
+          name="image"
+          as="input"
+          type="file"
+          style={{ alignSelf: "end" }}
+        />
       </View>
-      <View
-        name="image"
-        as="input"
-        type="file"
-        style={{ alignSelf: "end" }}
-      />
       <Heading level={2}>Current Notes</Heading>
       <View margin="3rem 0">
         {notes.map((note) => (
