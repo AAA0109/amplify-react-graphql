@@ -14,6 +14,9 @@
     "categories": {
       "auth": {
         "amplifyreactgraphql205afd10": {}
+      },
+      "api": {
+        "AmplifyTest": {}
       }
     }
   }
